@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>KDV Hesaplama (KDV Dahil, KDV Hariç)</title>
+<meta name="description" content="Bu hesaplama aracı ile KDV dahil ve KDV hariç tutarlarınızı farklı KDV oranlarıyla hesaplayabilir ve tablo üzerinde görüntüleyebilirsiniz.">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta property="og:description" content="Bu hesaplama aracı ile KDV dahil ve KDV hariç tutarlarınızı farklı KDV oranlarıyla hesaplayabilir ve tablo üzerinde görüntüleyebilirsiniz.">
+
+
+<link rel="stylesheet" type="text/css" href="s-h5.css"></head>
+<body>
+
+
+<div class="ortali-icerik" style="margin-top:10px">
+	<div class="sol-icerik">
+		<div class="sol-icerik-girinti">
+
+
+			<fieldset class="form-konteynir">
+				<legend>KDV Hesaplama Formu</legend>
+				<div class="form-giris">
+					<div class="form-ortala">
+						<div>
+							<input type="radio" name="radio" id="radio1" class="radio" value="x" checked onchange="hesapla()"/>
+							<label for="radio1">KDV Dahil</label>
+						</div>
+						<div style="margin-bottom:10px">
+							<input type="radio" name="radio" id="radio2" class="radio" value="y" onchange="hesapla()"/>
+							<label for="radio2">KDV Hariç</label>
+						</div>
+						<div class="t s"></div>
+						<p class="form-input-baslik">KDV Oranı</p>
+						<div style="width:32.3%;float:left;margin-right:1%">
+							<input type="radio" name="rade" id="radio3" class="radio" value="1" onchange="hesapla()"/>
+							<label for="radio3">%1</label>
+						</div>
+						<div style="width:32.3%;float:left;margin-right:1%">
+							<input type="radio" name="rade" id="radio4" class="radio" value="8" onchange="hesapla()"/>
+							<label for="radio4">%8</label>
+						</div>
+						<div style="width:32.4%;float:left;margin-right:1%">
+							<input type="radio" name="rade" id="radio5" class="radio" value="18" checked onchange="hesapla()"/>
+							<label for="radio5">%18</label>
+						</div>
+						<div class="t s"></div>
+						<div style="width:30%;float:left;margin-right:1%">
+							<input type="radio" name="rade" id="radio6" class="radio" value="d" onclick="document.getElementById('diger').focus()" onchange="hesapla()"/>
+							<label for="radio6">Diğer</label>
+						</div>
+						<div style="width:20%;float:left;margin-right:1%">
+						<input type="text" id="diger" class="form-textbox">
+						</div>
+						<div class="t s"></div>
+						<p class="form-input-baslik">KDV <span id="dahil-haric">Dahil</span> Tutar<span class="form-input-aciklama">TL</span></p>
+						<input type="text" id="d" class="form-textbox">
+						<div style="width:100%;margin:10px auto">
+							<p style="font-size:16px;line-height:28px;border-bottom:1px dotted #bbb">KDV Tutarı<span id="kdv-tutari" style="float:right;font-size:15px;font-weight:bold">0,00</span></p>
+							<p style="font-size:16px;line-height:28px;border-bottom:1px dotted #bbb">KDV Hariç Tutar<span id="kdv-haric" style="float:right;font-size:15px;font-weight:bold">0,00</span></p>
+							<p style="font-size:16px;line-height:28px;border-bottom:1px dotted #bbb">KDV Dahil Tutar<span id="kdv-dahil" style="float:right;font-size:15px;font-weight:bold">0,00</span></p>
+						</div>
+					</div>
+					<div style="width:130px;margin:10px auto">
+						<a class="temizleme" href="javascript:sifirla()">Temizle</a>
+					</div>
+				</div>
+			</fieldset>
+	<center><a style="background-color:grey" href="market://search?q=pub:Elmas+Yaz%C4%B1l%C4%B1m" target="_blank">Elmas Yazılım</a></center>		
+</div>
+
+</div>
+
+</div>
+
+<script src="jquery.min.1.11.0.js"></script>
+<script>
+var girisTablosu="";
+var cikisTablosu="";
+$(document).ready( function(){
+   $("#d, #diger").keydown(function (e) {
+        // Allow: backspace, delete, tab, escape, enter and .
+        if ($.inArray(e.keyCode, [46, 8, 9, 27, 13, 110, 190, 188]) !== -1 ||
+             // Allow: Ctrl+A
+            (e.keyCode == 65 && e.ctrlKey === true) || 
+             // Allow: home, end, left, right
+            (e.keyCode >= 35 && e.keyCode <= 39)) {
+                 // let it happen, don't do anything
+                 return;
+        }
+        // Ensure that it is a number and stop the keypress
+        if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105)) {
+            e.preventDefault();
+        }
+    });
+	$("#diger").keyup(function(){
+		hesapla();
+	});
+   $("#d").keyup(function (e) {
+		hesapla();
+    });
+	$("#gelir-vergisi").keyup(function (e) {
+		toplamHesapla();
+    });
+	girisTablosu = $("#girisler").html();
+	cikisTablosu = $("#cikislar").html();
+});
+function oturuS(){
+    $('html,body').animate({scrollTop: $("#aciklama").offset().top},500);
+}
+function tabloyuTemizle(){
+	$("#girisler").html(girisTablosu);
+	$("#cikislar").html(cikisTablosu);
+	toplamHesapla();
+}
+var girisFaturaSayisi = 0;
+var cikisFaturaSayisi = 0;
+function ekle(x){
+	var oran = $("input[name='rade']:checked").val();
+		if(oran == "d"){
+			oran = $("#diger").val();
+		}
+	var s = "";
+	if(x == 0){
+		girisFaturaSayisi++;
+		s = "<tr id='m"+(girisFaturaSayisi+1)+"' ><td class='fatura' style='border:1px solid #D2DADD;padding:2px 5px 2px 0;text-align:right'>"+$("#kdv-haric").text()+"</td><td class='kdv' style='border:1px solid #bbb;padding:2px 5px 2px 0;text-align:right'>"+oran+"</td><td class='kdv-tutari' style='border:1px solid #bbb;padding:2px 5px 2px 0;text-align:right'>"+$("#kdv-tutari").text()+"</td><td style='border:1px solid #bbb;padding:2px 5px 2px 0;text-align:right'>"+$("#kdv-dahil").text()+"</td><td title='Satırı Sil' style='height:21px;width:23px;border:1px solid #bbb;background:#FF664F url(/tr/hesaplamalar/dela.png) center center no-repeat;padding:0'><a href='javascript:satirSil(0,"+(girisFaturaSayisi+1)+")'><span style='height:21px;width:23px;float:left;'></span></a></td></tr>";
+		$("#girisler").append(s);
+	}else if(x == 1){
+		cikisFaturaSayisi++;
+		s = "<tr id='s"+(cikisFaturaSayisi+1)+"' ><td class='fatura' style='border:1px solid #D2DADD;padding:2px 5px 2px 0;text-align:right'>"+$("#kdv-haric").text()+"</td><td class='kdv' style='border:1px solid #bbb;padding:2px 5px 2px 0;text-align:right'>"+oran+"</td><td class='kdv-tutari' style='border:1px solid #bbb;padding:2px 5px 2px 0;text-align:right'>"+$("#kdv-tutari").text()+"</td><td style='border:1px solid #bbb;padding:2px 5px 2px 0;text-align:right'>"+$("#kdv-dahil").text()+"</td><td title='Satırı Sil' style='height:21px;width:23px;border:1px solid #bbb;background:#FF664F url(/tr/hesaplamalar/dela.png) center center no-repeat;padding:0'><a href='javascript:satirSil(1,"+(cikisFaturaSayisi+1)+")'><span style='height:21px;width:23px;float:left;'></span></a></td></tr>";
+		$("#cikislar").append(s);
+	}
+	sifirla();
+	toplamHesapla();
+}
+function toplamHesapla(){
+	var girisler=0;
+	var giriskdv=0;
+	var cikislar=0;
+	var cikiskdv=0;
+	var kdvfarki=0;
+	var gelirvergisi = 0;
+	var gelirVergisi = $("#gelir-vergisi").val();
+	$("#girisler .fatura").each( function(){
+		var d = $(this).text();
+		d = d.replace('.', '');
+		d = d.replace(',', '.');
+		girisler += parseFloat(d);
+	});
+	$("#girisler .kdv-tutari").each( function(){
+		var d = $(this).text();
+		d = d.replace('.', '');
+		d = d.replace(',', '.');
+		giriskdv += parseFloat(d);
+	});
+	$("#cikislar .fatura").each( function(){
+		var d = $(this).text();
+		d = d.replace('.', '');
+		d = d.replace(',', '.');
+		cikislar += parseFloat(d);
+	});
+	$("#cikislar .kdv-tutari").each( function(){
+		var d = $(this).text();
+		d = d.replace('.', '');
+		d = d.replace(',', '.');
+		cikiskdv += parseFloat(d);
+	});
+	gelirvergisi = cikislar - girisler;
+	kdvfarki = cikiskdv - giriskdv;
+	if(kdvfarki < 0){
+		$("#kdv-farki-goster").css('border-color','#FF664F');
+		$("#kdv-farki-goster").css('color','#FF664F');
+		$("#kdv-farki-goster").text(currencyFormatDE(kdvfarki) + " / Devir");
+	}else{	
+		$("#kdv-farki-goster").css('border-color','#4A7DB1');
+		$("#kdv-farki-goster").css('color','#4A7DB1');
+		$("#kdv-farki-goster").text(currencyFormatDE(kdvfarki));
+	}
+	if(gelirvergisi < 0){
+		$("#gelir-vergisi-goster").css('border-color','#FF664F');
+		$("#gelir-vergisi-goster").css('color','#FF664F');
+		$("#gelir-vergisi-goster").text(currencyFormatDE(gelirvergisi) + " / Zarar");
+	}else{	
+		$("#gelir-vergisi-goster").css('border-color','#4A7DB1');
+		$("#gelir-vergisi-goster").css('color','#4A7DB1');
+		$("#gelir-vergisi-goster").text(currencyFormatDE(gelirvergisi * (gelirVergisi / 100)));
+	}
+}
+
+function satirSil(x,y){
+	if(x == 0){
+		$('#m'+y+'').remove()
+	}else{
+		$('#s'+y+'').remove()
+	}
+	toplamHesapla();
+}
+function hesapla(){
+		var dahilMi = $("input[name='radio']:checked").val();
+		var oran = $("input[name='rade']:checked").val();
+		if(oran == "d"){
+			oran = $("#diger").val();
+		}
+		if(dahilMi == "x"){
+			$("#dahil-haric").text('Dahil');
+		}else{
+			$("#dahil-haric").text('Hariç');
+		}
+		var uzunluk = $("#d").val().length;
+		if(uzunluk <= 0){
+			$("#kdv-dahil, #kdv-haric, #kdv-tutari").text("0,00");
+			return
+		}
+		var tutar = $("#d").val().replace(/,/g, '.');
+		tutar = parseFloat(tutar);
+		if(dahilMi == "x"){
+			$("#dahil-haric").text('Dahil');
+			var kdvHaric = tutar / (1 + (oran / 100));
+			$("#kdv-haric").text(currencyFormatDE(kdvHaric));
+			$("#kdv-dahil").text(currencyFormatDE(tutar));
+			$("#kdv-tutari").text(currencyFormatDE(tutar - kdvHaric));
+		}else{
+			$("#dahil-haric").text('Hariç');
+			kdvDahil = tutar * (1 + (oran / 100));
+			$("#kdv-dahil").text(currencyFormatDE(kdvDahil));
+			$("#kdv-haric").text(currencyFormatDE(tutar));
+			$("#kdv-tutari").text(currencyFormatDE(kdvDahil - tutar));
+		}
+}
+function sifirla(){
+	$("#d").val('');
+	hesapla();
+}
+function currencyFormatDE(num){
+    return num
+       .toFixed(2) // always two decimal digits
+       .replace(".", ",") // replace decimal point character with ,
+       .replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1.") // use . as a separator
+}
+</script>
+</body>
+</html>
